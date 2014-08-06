@@ -595,6 +595,9 @@ KBUILD_CFLAGS   += $(call cc-option,-fno-store-merging,)
 # Disable incompatible-pointer-types warnings
 KBUILD_CFLAGS   += $(call cc-disable-warning,incompatible-pointer-types,)
 
+# Tell gcc to never replace conditional load with a non-conditional one
+KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
+
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os
 else
