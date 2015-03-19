@@ -4066,20 +4066,6 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 	INIT_WORK(&rmi4_data->recovery_work, synaptics_rmi4_recover_work);
 	INIT_DELAYED_WORK(&rmi4_data->init_work, synaptics_rmi4_init_work);
 
-	rmi4_data->irq = gpio_to_irq(platform_data->irq_gpio);
-
-	retval = request_threaded_irq(rmi4_data->irq, NULL,
-		synaptics_rmi4_irq, platform_data->irq_flags,
-		DRIVER_NAME, rmi4_data);
-	rmi4_data->irq_enabled = true;
-
-	if (retval < 0) {
-		dev_err(&client->dev,
-				"%s: Failed to create irq thread\n",
-				__func__);
-		goto err_enable_irq;
-	}
-
 	rmi4_data->dir = debugfs_create_dir(DEBUGFS_DIR_NAME, NULL);
 	if (rmi4_data->dir == NULL || IS_ERR(rmi4_data->dir)) {
 		dev_err(&client->dev,
@@ -4126,12 +4112,18 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 	synaptics_rmi4_sensor_wake(rmi4_data);
 	synaptics_rmi4_set_configuration(rmi4_data);
 
-	retval = synaptics_rmi4_irq_enable(rmi4_data, true);
+	rmi4_data->irq = gpio_to_irq(platform_data->irq_gpio);
+
+	retval = request_threaded_irq(rmi4_data->irq, NULL,
+		synaptics_rmi4_irq, platform_data->irq_flags,
+		DRIVER_NAME, rmi4_data);
+	rmi4_data->irq_enabled = true;
+
 	if (retval < 0) {
 		dev_err(&client->dev,
-			"%s: Failed to enable attention interrupt\n",
-			__func__);
-		goto err_sysfs;
+				"%s: Failed to create irq thread\n",
+				__func__);
+		goto err_enable_irq;
 	}
 
 	synaptics_secure_touch_init(rmi4_data);
@@ -4140,7 +4132,7 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 	retval = synaptics_rmi4_check_configuration(rmi4_data);
 	if (retval < 0) {
 		dev_err(&client->dev, "Failed to check configuration\n");
-		goto err_sysfs;
+		goto err_check_configuration;
 	}
 
 #ifdef CONFIG_WAKE_GESTURES
@@ -4150,6 +4142,9 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 
 	return retval;
 
+err_check_configuration:
+	free_irq(rmi4_data->irq, rmi4_data);
+err_enable_irq:
 err_sysfs:
 	for (attr_count--; attr_count >= 0; attr_count--) {
 		sysfs_remove_file(&rmi4_data->input_dev->dev.kobj,
@@ -4158,8 +4153,6 @@ err_sysfs:
 err_create_debugfs_file:
 	debugfs_remove_recursive(rmi4_data->dir);
 err_create_debugfs_dir:
-	free_irq(rmi4_data->irq, rmi4_data);
-err_enable_irq:
 	cancel_delayed_work_sync(&rmi4_data->det_work);
 	flush_workqueue(rmi4_data->det_workqueue);
 	destroy_workqueue(rmi4_data->det_workqueue);
