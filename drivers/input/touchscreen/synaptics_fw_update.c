@@ -371,7 +371,6 @@ static int parse_header(void)
 		sizeof(data->product_id));
 	img->product_id[sizeof(data->product_id)] = 0;
 
-	img->product_id[sizeof(data->product_info)] = 0;
 	memcpy(img->product_info, data->product_info,
 		sizeof(data->product_info));
 
