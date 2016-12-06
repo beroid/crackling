@@ -89,7 +89,7 @@ static unsigned int cycle = 0;
  * suspend mode, if set = 1 hotplug will sleep,
  * if set = 0, then hoplug will be active all the time.
  */
-static unsigned int hotplug_suspend = 1;
+static unsigned int hotplug_suspend = 0;
 module_param_named(hotplug_suspend, hotplug_suspend, uint, 0644);
 
 static void reschedule_hotplug_work(void)
