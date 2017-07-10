@@ -51,6 +51,7 @@ core-$(CONFIG_XEN)		+= arch/arm64/xen/
 core-$(CONFIG_KVM) += arch/arm64/kvm/
 core-$(CONFIG_CRYPTO) += arch/arm64/crypto/
 core-$(CONFIG_FORCE_FAST_CHARGE) += arch/arm64/fastcharge/
+core-y		+= arch/arm64/hotplug/
 libs-y		:= arch/arm64/lib/ $(libs-y)
 
 # Default target when executing plain make
