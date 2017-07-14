@@ -2,7 +2,7 @@
 # FOXY
 #
 
-CONFIG_LOCALVERSION="-foxyKernel-crackling-v2.1.N"
+CONFIG_LOCALVERSION="-foxyKernel-crackling-v2.2.N"
 # CONFIG_LOCALVERSION_AUTO is not set
 # CONFIG_CC_OPTIMIZE_FOR_SIZE is not set
 CONFIG_HAVE_KERNEL_GZIP=y
