@@ -41,18 +41,18 @@
 #define S2S_DEFAULT		0
 #define WG_PWRKEY_DUR           180
 
-/* shamu */
-#define SWEEP_Y_MAX             1920
-#define SWEEP_X_MAX             1080
-#define SWEEP_EDGE		90
+/* crackling */
+#define SWEEP_Y_MAX             1280
+#define SWEEP_X_MAX             720
+#define SWEEP_EDGE		65
 #define SWEEP_Y_LIMIT           SWEEP_Y_MAX-SWEEP_EDGE
 #define SWEEP_X_LIMIT           SWEEP_X_MAX-SWEEP_EDGE
-#define SWEEP_X_B1              399
-#define SWEEP_X_B2              720
-#define SWEEP_Y_START		800
-#define SWEEP_X_START		540
-#define SWEEP_X_FINAL           270
-#define SWEEP_Y_NEXT            135
+#define SWEEP_X_B1              216
+#define SWEEP_X_B2              480
+#define SWEEP_Y_START		533
+#define SWEEP_X_START		360
+#define SWEEP_X_FINAL           180
+#define SWEEP_Y_NEXT            150
 #define DT2W_FEATHER		150
 #define DT2W_TIME 		150
 
@@ -771,4 +771,3 @@ static void __exit wake_gestures_exit(void)
 
 module_init(wake_gestures_init);
 module_exit(wake_gestures_exit);
-
