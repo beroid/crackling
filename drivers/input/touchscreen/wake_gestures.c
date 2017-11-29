@@ -94,6 +94,7 @@ static unsigned long pwrtrigger_time[2] = {0, 0};
 static unsigned long long tap_time_pre = 0;
 static int touch_nr = 0, x_pre = 0, y_pre = 0;
 static bool touch_cnt = true;
+static bool registered;
 int vib_strength = VIB_STRENGTH;
 
 static struct input_dev * wake_dev;
@@ -436,7 +437,6 @@ static void dt2w_input_callback(struct work_struct *unused)
 static void wg_input_event(struct input_handle *handle, unsigned int type,
 				unsigned int code, int value)
 {
-
 	if (scr_suspended() && code == ABS_MT_POSITION_X) {
 		value -= 5000;
 	}
@@ -457,7 +457,7 @@ static void wg_input_event(struct input_handle *handle, unsigned int type,
 	if (code == ABS_MT_TRACKING_ID && value == -1) {
 		sweep2wake_reset();
 		touch_cnt = true;
-		schedule_work_on(0, &dt2w_input_work);
+		schedule_work(&dt2w_input_work);
 		return;
 	}
 
@@ -474,11 +474,11 @@ static void wg_input_event(struct input_handle *handle, unsigned int type,
 	if (touch_x_called && touch_y_called) {
 		touch_x_called = false;
 		touch_y_called = false;
-		schedule_work_on(0, &s2w_input_work);
+		schedule_work(&s2w_input_work);
 	} else if (!scr_suspended() && touch_x_called && !touch_y_called) {
 		touch_x_called = false;
 		touch_y_called = false;
-		schedule_work_on(0, &s2w_input_work);
+		schedule_work(&s2w_input_work);
 	}
 }
 
@@ -542,6 +542,48 @@ static struct input_handler wg_input_handler = {
 	.id_table	= wg_ids,
 };
 
+static void unregister_wg(void)
+{
+	if (!registered)
+		return;
+
+	registered = false;
+	wake_lock_destroy(&dt2w_wakelock);
+	input_unregister_handler(&wg_input_handler);
+
+	cancel_work_sync(&dt2w_input_work);
+	cancel_work_sync(&s2w_input_work);
+}
+
+static int register_wg(void)
+{
+	int rc = 0;
+
+	if (!s2w_switch && !s2s_switch && !dt2w_switch && !gestures_switch) {
+		unregister_wg();
+		return rc;
+	}
+
+	if (registered)
+		return rc;
+
+	INIT_WORK(&s2w_input_work, s2w_input_callback);
+	INIT_WORK(&dt2w_input_work, dt2w_input_callback);
+	wake_lock_init(&dt2w_wakelock, WAKE_LOCK_SUSPEND, "dt2w_wakelock");
+
+	rc = input_register_handler(&wg_input_handler);
+	if (rc) {
+		pr_err("%s: Failed to register wg_input_handler\n", __func__);
+		goto err;
+	}
+
+	registered = true;
+
+	return rc;
+err:
+	wake_lock_destroy(&dt2w_wakelock);
+	return rc;
+}
 
 /*
  * SYSFS stuff below here
@@ -568,6 +610,7 @@ static ssize_t sweep2wake_dump(struct device *dev,
 	else
 		s2w_switch_changed = true;
 
+	register_wg();
 	return count;
 }
 
@@ -588,7 +631,8 @@ static ssize_t sweep2sleep_dump(struct device *dev,
 	sscanf(buf, "%d ", &s2s_switch);
 	if (s2s_switch < 0 || s2s_switch > 3)
 		s2s_switch = 0;				
-				
+
+	register_wg();				
 	return count;
 }
 
@@ -619,6 +663,7 @@ static ssize_t doubletap2wake_dump(struct device *dev,
 	else
 		dt2w_switch_changed = true;
 
+	register_wg();
 	return count;
 }
 
@@ -639,6 +684,8 @@ static ssize_t wake_gestures_dump(struct device *dev,
 	sscanf(buf, "%d ", &gestures_switch);
 	if (gestures_switch < 0 || gestures_switch > 1)
 		gestures_switch = 0;	
+	
+	register_wg();
 	return count;
 }
 
@@ -679,15 +726,7 @@ static int __init wake_gestures_init(void)
 {
 	int rc = 0;
 
-	rc = input_register_handler(&wg_input_handler);
-	if (rc)
-		pr_err("%s: Failed to register wg_input_handler\n", __func__);
-
-	INIT_WORK(&s2w_input_work, s2w_input_callback);
-		
-	INIT_WORK(&dt2w_input_work, dt2w_input_callback);
-		
-	wake_lock_init(&dt2w_wakelock, WAKE_LOCK_SUSPEND, "dt2w_wakelock");
+	rc = register_wg();
 		
 #if (WAKE_GESTURES_ENABLED)
 	gesture_dev = input_allocate_device();
@@ -695,7 +734,7 @@ static int __init wake_gestures_init(void)
 		pr_err("Can't allocate gesture device\n");
 		goto err_alloc_dev;
 	}
-	
+
 	gesture_dev->name = "wake_gesture";
 	gesture_dev->phys = "wake_gesture/input0";
 	input_set_capability(gesture_dev, EV_REL, WAKE_GESTURE);
@@ -746,9 +785,8 @@ err_alloc_dev:
 static void __exit wake_gestures_exit(void)
 {
 	kobject_del(android_touch_kobj);
-	input_unregister_handler(&wg_input_handler);
 	input_free_device(wake_dev);
-	wake_lock_destroy(&dt2w_wakelock);
+	unregister_wg();
 #if (WAKE_GESTURES_ENABLED)	
 	input_unregister_device(gesture_dev);
 	input_free_device(gesture_dev);
