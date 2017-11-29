@@ -69,6 +69,8 @@ struct qpnp_vib {
 	spinlock_t lock;
 };
 
+static struct qpnp_vib *gvib;
+
 static int qpnp_vib_read_u8(struct qpnp_vib *vib, u8 *data, u16 reg)
 {
 	int rc;
@@ -297,6 +299,11 @@ retry:
 	spin_unlock_irqrestore(&vib->lock, flags);
 }
 
+void set_vibrate(int value)
+{
+	qpnp_vib_enable(&gvib->timed_dev, value);
+}
+
 static int qpnp_vib_get_time(struct timed_output_dev *dev)
 {
 	struct qpnp_vib *vib = container_of(dev, struct qpnp_vib,
@@ -504,6 +511,8 @@ static int qpnp_vibrator_probe(struct spmi_device *spmi)
 	rc = device_create_file(vib->timed_dev.dev, &dev_attr_vtg_default);
 	if (rc < 0)
 		goto error_create_default;
+
+	gvib = vib;
 
 	return 0;
 
