@@ -32,6 +32,7 @@ extern bool dt2w_switch_changed;
 extern int vib_strength;
 extern bool gestures_enabled;
 extern bool pwrkey_pressed;
+extern int in_call;
 bool scr_suspended(void);
 void wg_setdev(struct input_dev *);
 void set_vibrate(int value);
