@@ -30,3 +30,10 @@ config ZEN_DECISION
 	  by disabling these services.
 
 	  If unsure, say N.
+
+config INTELLI_PLUG
+ 	bool "Hotplug for Razor Reborn"
+ 	depends on MSM_RUN_QUEUE_STATS
+ 	default y
+ 	help
+ 	  This enables kernel based multi core control.
